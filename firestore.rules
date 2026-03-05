@@ -1,0 +1,49 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
+    }
+
+    // Admins collection — only admins can read/write
+    match /admins/{email} {
+      allow read, write: if isAdmin();
+    }
+
+    // Opportunities — anyone reads, admins write
+    match /opportunities/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Notifications — anyone reads, admins write
+    match /notifications/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Support messages — anyone creates, admins read/update/delete
+    match /supportMessages/{docId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // App settings — anyone reads, admins write
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
