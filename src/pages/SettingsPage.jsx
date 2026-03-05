@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, serverTimestamp } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
 import { db, storage } from '../firebase/config'
+import { useTranslation } from '../context/LanguageContext'
 
 const defaultConfig = {
   maintenanceMode: false,
@@ -22,6 +23,7 @@ const defaultConfig = {
 }
 
 export default function SettingsPage() {
+  const { t } = useTranslation()
   const [config, setConfig] = useState(defaultConfig)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -61,7 +63,7 @@ export default function SettingsPage() {
       const snapshot = await getDocs(adminsRef)
       setAdmins(snapshot.docs.map(d => ({ id: d.id, ...d.data() })))
     } catch {
-      setAdminError('حدث خطأ في تحميل المشرفين')
+      setAdminError(t('adminLoadError'))
     }
     setAdminLoading(false)
   }
@@ -74,7 +76,7 @@ export default function SettingsPage() {
 
     // Check duplicate
     if (admins.some(a => a.email?.toLowerCase() === email)) {
-      setAdminError('هذا البريد مضاف بالفعل')
+      setAdminError(t('adminDuplicate'))
       return
     }
 
@@ -83,20 +85,20 @@ export default function SettingsPage() {
       setNewAdminEmail('')
       await loadAdmins()
     } catch {
-      setAdminError('حدث خطأ أثناء الإضافة')
+      setAdminError(t('adminAddError'))
     }
   }
 
   async function handleDeleteAdmin(admin) {
     if (admin.email?.toLowerCase() === currentEmail.toLowerCase()) {
-      setAdminError('لا يمكنك حذف نفسك')
+      setAdminError(t('adminDeleteSelf'))
       return
     }
     try {
       await deleteDoc(doc(db, 'admins', admin.id))
       await loadAdmins()
     } catch {
-      setAdminError('حدث خطأ أثناء الحذف')
+      setAdminError(t('adminDeleteError'))
     }
   }
 
@@ -111,7 +113,7 @@ export default function SettingsPage() {
       const url = await getDownloadURL(storageRef)
       setConfig({ ...config, bannerImageUrl: url, bannerImagePath: path })
     } catch {
-      alert('حدث خطأ أثناء رفع الصورة')
+      alert(t('uploadError'))
     }
     setUploading(false)
     if (fileInputRef.current) fileInputRef.current.value = ''
@@ -137,26 +139,37 @@ export default function SettingsPage() {
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } catch {
-      alert('حدث خطأ أثناء الحفظ')
+      alert(t('saveError'))
     }
     setSaving(false)
   }
 
-  if (loading) return <p className="text-textSecondary">جاري التحميل...</p>
+  if (loading) return <p className="text-textSecondary">{t('loading')}</p>
+
+  const colorThemes = [
+    { bg: '#2D5A3D', text: '#FFFFFF', label: t('colorGreen') },
+    { bg: '#1E3D2A', text: '#E8F0EA', label: t('colorDarkGreen') },
+    { bg: '#E8F0EA', text: '#2D5A3D', label: t('colorLightGreen') },
+    { bg: '#3B82F6', text: '#FFFFFF', label: t('colorBlue') },
+    { bg: '#DBEAFE', text: '#3B82F6', label: t('colorLightBlue') },
+    { bg: '#F59E0B', text: '#FFFFFF', label: t('colorOrange') },
+    { bg: '#1A1A1A', text: '#FFFFFF', label: t('colorDark') },
+    { bg: '#FFFFFF', text: '#1A1A1A', label: t('colorLight') },
+  ]
 
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-xl sm:text-2xl font-bold text-primary mb-1">الإعدادات</h2>
-        <p className="text-textSecondary text-sm">إعدادات التطبيق العامة</p>
+        <h2 className="text-xl sm:text-2xl font-bold text-primary mb-1">{t('settings')}</h2>
+        <p className="text-textSecondary text-sm">{t('settingsSubtitle')}</p>
       </div>
 
       <form onSubmit={handleSave} className="bg-surface rounded-xl shadow-sm p-4 sm:p-6 max-w-xl space-y-6">
         {/* Maintenance Mode */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-medium text-textPrimary">وضع الصيانة</p>
-            <p className="text-textSecondary text-sm">تعطيل التطبيق مؤقتاً للمستخدمين</p>
+            <p className="font-medium text-textPrimary">{t('maintenanceMode')}</p>
+            <p className="text-textSecondary text-sm">{t('maintenanceModeDesc')}</p>
           </div>
           <button
             type="button"
@@ -176,13 +189,13 @@ export default function SettingsPage() {
         {/* Maintenance Message */}
         {config.maintenanceMode && (
           <div>
-            <label className="block font-medium text-textPrimary mb-1">رسالة الصيانة</label>
-            <p className="text-textSecondary text-sm mb-2">تظهر للمستخدمين أثناء وضع الصيانة</p>
+            <label className="block font-medium text-textPrimary mb-1">{t('maintenanceMessage')}</label>
+            <p className="text-textSecondary text-sm mb-2">{t('maintenanceMessageDesc')}</p>
             <textarea
               value={config.maintenanceMessage}
               onChange={(e) => setConfig({ ...config, maintenanceMessage: e.target.value })}
               rows={2}
-              placeholder="التطبيق تحت الصيانة حالياً..."
+              placeholder={t('maintenancePlaceholder')}
               className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary resize-none"
             />
           </div>
@@ -190,8 +203,8 @@ export default function SettingsPage() {
 
         {/* Min App Version */}
         <div>
-          <label className="block font-medium text-textPrimary mb-1">الحد الأدنى لإصدار التطبيق</label>
-          <p className="text-textSecondary text-sm mb-2">الإصدار المطلوب لاستخدام التطبيق</p>
+          <label className="block font-medium text-textPrimary mb-1">{t('minAppVersion')}</label>
+          <p className="text-textSecondary text-sm mb-2">{t('minAppVersionDesc')}</p>
           <input
             type="text"
             value={config.minAppVersion}
@@ -205,8 +218,8 @@ export default function SettingsPage() {
         {/* CV Enabled */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-medium text-textPrimary">مساعد السيرة الذاتية بالذكاء الاصطناعي</p>
-            <p className="text-textSecondary text-sm">السماح للمستخدمين باستخدام ميزة الذكاء الاصطناعي للسيرة الذاتية</p>
+            <p className="font-medium text-textPrimary">{t('cvAI')}</p>
+            <p className="text-textSecondary text-sm">{t('cvAIDesc')}</p>
           </div>
           <button
             type="button"
@@ -225,8 +238,8 @@ export default function SettingsPage() {
 
         {/* AI Daily Limit */}
         <div>
-          <label className="block font-medium text-textPrimary mb-1">حد الذكاء الاصطناعي اليومي</label>
-          <p className="text-textSecondary text-sm mb-2">عدد مرات استخدام الذكاء الاصطناعي المسموحة يومياً لكل مستخدم (0 = بدون حد)</p>
+          <label className="block font-medium text-textPrimary mb-1">{t('aiDailyLimit')}</label>
+          <p className="text-textSecondary text-sm mb-2">{t('aiDailyLimitDesc')}</p>
           <input
             type="number"
             min="0"
@@ -242,8 +255,8 @@ export default function SettingsPage() {
         <div className="border-t border-border pt-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="font-medium text-textPrimary">البانر الإعلاني</p>
-              <p className="text-textSecondary text-sm">عرض بانر للمستخدمين داخل التطبيق</p>
+              <p className="font-medium text-textPrimary">{t('banner')}</p>
+              <p className="text-textSecondary text-sm">{t('bannerDesc')}</p>
             </div>
             <button
               type="button"
@@ -264,7 +277,7 @@ export default function SettingsPage() {
             <div className="space-y-4 bg-background rounded-lg p-4">
               {/* Type */}
               <div>
-                <label className="block text-sm font-medium text-textPrimary mb-2">نوع البانر</label>
+                <label className="block text-sm font-medium text-textPrimary mb-2">{t('bannerType')}</label>
                 <div className="flex gap-3">
                   <button
                     type="button"
@@ -275,7 +288,7 @@ export default function SettingsPage() {
                         : 'bg-surface border border-border text-textSecondary'
                     }`}
                   >
-                    نص فقط
+                    {t('bannerTextOnly')}
                   </button>
                   <button
                     type="button"
@@ -286,7 +299,7 @@ export default function SettingsPage() {
                         : 'bg-surface border border-border text-textSecondary'
                     }`}
                   >
-                    صورة
+                    {t('bannerImage')}
                   </button>
                 </div>
               </div>
@@ -295,30 +308,21 @@ export default function SettingsPage() {
               {config.bannerType === 'text' && (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-textPrimary mb-1">نص البانر</label>
+                    <label className="block text-sm font-medium text-textPrimary mb-1">{t('bannerText')}</label>
                     <input
                       type="text"
                       value={config.bannerText}
                       onChange={(e) => setConfig({ ...config, bannerText: e.target.value })}
-                      placeholder="اكتب نص البانر هنا..."
+                      placeholder={t('bannerTextPlaceholder')}
                       className="w-full px-3 py-2 border border-border rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                     />
                   </div>
 
                   {/* Color Theme */}
                   <div>
-                    <label className="block text-sm font-medium text-textPrimary mb-2">نمط الألوان</label>
+                    <label className="block text-sm font-medium text-textPrimary mb-2">{t('bannerColorTheme')}</label>
                     <div className="grid grid-cols-2 gap-2">
-                      {[
-                        { bg: '#2D5A3D', text: '#FFFFFF', label: 'أخضر' },
-                        { bg: '#1E3D2A', text: '#E8F0EA', label: 'أخضر داكن' },
-                        { bg: '#E8F0EA', text: '#2D5A3D', label: 'أخضر فاتح' },
-                        { bg: '#3B82F6', text: '#FFFFFF', label: 'أزرق' },
-                        { bg: '#DBEAFE', text: '#3B82F6', label: 'أزرق فاتح' },
-                        { bg: '#F59E0B', text: '#FFFFFF', label: 'برتقالي' },
-                        { bg: '#1A1A1A', text: '#FFFFFF', label: 'داكن' },
-                        { bg: '#FFFFFF', text: '#1A1A1A', label: 'فاتح' },
-                      ].map(pair => {
+                      {colorThemes.map(pair => {
                         const isSelected = config.bannerBgColor === pair.bg && config.bannerTextColor === pair.text
                         return (
                           <button
@@ -340,7 +344,7 @@ export default function SettingsPage() {
                   {/* Preview */}
                   {config.bannerText && (
                     <div>
-                      <label className="block text-sm font-medium text-textPrimary mb-2">معاينة</label>
+                      <label className="block text-sm font-medium text-textPrimary mb-2">{t('bannerPreview')}</label>
                       <div
                         className="rounded-lg px-4 py-3 text-center text-sm font-medium"
                         style={{ backgroundColor: config.bannerBgColor, color: config.bannerTextColor }}
@@ -355,14 +359,14 @@ export default function SettingsPage() {
               {/* Image Upload */}
               {config.bannerType === 'image' && (
                 <div>
-                  <label className="block text-sm font-medium text-textPrimary mb-2">صورة البانر</label>
+                  <label className="block text-sm font-medium text-textPrimary mb-2">{t('bannerImageLabel')}</label>
 
                   {config.bannerImageUrl ? (
                     <div className="space-y-2">
                       <div className="rounded-lg overflow-hidden border border-border">
                         <img
                           src={config.bannerImageUrl}
-                          alt="معاينة البانر"
+                          alt={t('bannerImagePreview')}
                           className="w-full h-32 object-cover"
                         />
                       </div>
@@ -372,14 +376,14 @@ export default function SettingsPage() {
                           onClick={() => fileInputRef.current?.click()}
                           className="flex-1 py-2 text-sm bg-surface border border-border rounded-lg text-textSecondary hover:bg-background transition cursor-pointer"
                         >
-                          تغيير الصورة
+                          {t('changeImage')}
                         </button>
                         <button
                           type="button"
                           onClick={handleRemoveImage}
                           className="px-4 py-2 text-sm text-danger border border-border rounded-lg hover:bg-red-50 transition cursor-pointer"
                         >
-                          حذف
+                          {t('delete')}
                         </button>
                       </div>
                     </div>
@@ -391,11 +395,11 @@ export default function SettingsPage() {
                       className="w-full py-8 border-2 border-dashed border-border rounded-lg text-textSecondary hover:border-primary hover:text-primary transition cursor-pointer flex flex-col items-center gap-2 disabled:opacity-50"
                     >
                       {uploading ? (
-                        <span className="text-sm">جاري الرفع...</span>
+                        <span className="text-sm">{t('uploading')}</span>
                       ) : (
                         <>
                           <span className="text-3xl">📷</span>
-                          <span className="text-sm">اضغط لرفع صورة</span>
+                          <span className="text-sm">{t('uploadImage')}</span>
                           <span className="text-xs text-textSecondary/60">PNG, JPG, WEBP</span>
                         </>
                       )}
@@ -414,7 +418,7 @@ export default function SettingsPage() {
 
               {/* Link */}
               <div>
-                <label className="block text-sm font-medium text-textPrimary mb-1">رابط عند الضغط (اختياري)</label>
+                <label className="block text-sm font-medium text-textPrimary mb-1">{t('bannerLink')}</label>
                 <input
                   type="url"
                   value={config.bannerLink}
@@ -430,12 +434,12 @@ export default function SettingsPage() {
 
         {/* Rate Us Links */}
         <div className="border-t border-border pt-6">
-          <p className="font-medium text-textPrimary">تقييم التطبيق</p>
-          <p className="text-textSecondary text-sm mb-4">روابط المتاجر لميزة تقييم التطبيق</p>
+          <p className="font-medium text-textPrimary">{t('rateApp')}</p>
+          <p className="text-textSecondary text-sm mb-4">{t('rateAppDesc')}</p>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-textPrimary mb-1">رابط App Store (iOS)</label>
+              <label className="block text-sm font-medium text-textPrimary mb-1">{t('rateIos')}</label>
               <input
                 type="url"
                 value={config.rateIosLink}
@@ -446,7 +450,7 @@ export default function SettingsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-textPrimary mb-1">رابط Google Play (Android)</label>
+              <label className="block text-sm font-medium text-textPrimary mb-1">{t('rateAndroid')}</label>
               <input
                 type="url"
                 value={config.rateAndroidLink}
@@ -466,18 +470,18 @@ export default function SettingsPage() {
             disabled={saving}
             className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition disabled:opacity-50 cursor-pointer"
           >
-            {saving ? 'جاري الحفظ...' : 'حفظ الإعدادات'}
+            {saving ? t('saving') : t('saveSettings')}
           </button>
           {saved && (
-            <span className="text-success text-sm font-medium">تم الحفظ بنجاح ✓</span>
+            <span className="text-success text-sm font-medium">{t('savedSuccess')}</span>
           )}
         </div>
       </form>
 
       {/* Admin Management Section */}
       <div className="mt-8 bg-surface rounded-xl shadow-sm p-4 sm:p-6 max-w-xl">
-        <h3 className="text-lg font-bold text-primary mb-1">إدارة المشرفين</h3>
-        <p className="text-textSecondary text-sm mb-4">إضافة أو حذف حسابات المشرفين المصرح لهم</p>
+        <h3 className="text-lg font-bold text-primary mb-1">{t('adminManagement')}</h3>
+        <p className="text-textSecondary text-sm mb-4">{t('adminManagementDesc')}</p>
 
         {adminError && (
           <div className="bg-red-50 text-danger text-sm rounded-lg p-3 mb-4">
@@ -489,7 +493,7 @@ export default function SettingsPage() {
         <form onSubmit={handleAddAdmin} className="flex gap-2 mb-4">
           <input
             type="email"
-            placeholder="البريد الإلكتروني"
+            placeholder={t('adminEmail')}
             value={newAdminEmail}
             onChange={(e) => setNewAdminEmail(e.target.value)}
             className="flex-1 px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary text-sm"
@@ -499,28 +503,28 @@ export default function SettingsPage() {
             type="submit"
             className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition text-sm cursor-pointer"
           >
-            إضافة
+            {t('addAdmin')}
           </button>
         </form>
 
         {/* Admin list */}
         {adminLoading ? (
-          <p className="text-textSecondary text-sm">جاري التحميل...</p>
+          <p className="text-textSecondary text-sm">{t('loading')}</p>
         ) : admins.length === 0 ? (
-          <p className="text-textSecondary text-sm">لا يوجد مشرفين</p>
+          <p className="text-textSecondary text-sm">{t('noAdmins')}</p>
         ) : (
           <ul className="space-y-2">
             {admins.map(admin => (
               <li key={admin.id} className="flex items-center justify-between px-3 sm:px-4 py-3 bg-background rounded-lg gap-2">
                 <span className="text-sm text-textPrimary truncate" dir="ltr">{admin.email}</span>
                 {admin.email?.toLowerCase() === currentEmail.toLowerCase() ? (
-                  <span className="text-xs text-textSecondary">أنت</span>
+                  <span className="text-xs text-textSecondary">{t('you')}</span>
                 ) : (
                   <button
                     onClick={() => handleDeleteAdmin(admin)}
                     className="text-danger text-sm hover:text-red-700 transition cursor-pointer"
                   >
-                    حذف
+                    {t('delete')}
                   </button>
                 )}
               </li>

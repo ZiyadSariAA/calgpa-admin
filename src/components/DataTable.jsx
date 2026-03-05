@@ -1,15 +1,18 @@
+import { useTranslation } from '../context/LanguageContext'
+
 export default function DataTable({
   columns,
   data,
   loading,
   emptyIcon = '📭',
-  emptyTitle = 'لا توجد بيانات',
+  emptyTitle,
   emptySubtitle = '',
   selectable = false,
   selectedIds = [],
   onSelectionChange,
   onRowClick,
 }) {
+  const { t } = useTranslation()
   const allSelected = data.length > 0 && data.every(row => selectedIds.includes(row.id))
 
   function handleSelectAll() {
@@ -35,7 +38,7 @@ export default function DataTable({
     return (
       <div className="bg-surface rounded-xl shadow-sm p-12 text-center">
         <div className="inline-block w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin mb-3" />
-        <p className="text-textSecondary">جاري التحميل...</p>
+        <p className="text-textSecondary">{t('tableLoading')}</p>
       </div>
     )
   }
@@ -44,7 +47,7 @@ export default function DataTable({
     return (
       <div className="bg-surface rounded-xl shadow-sm p-12 text-center">
         <p className="text-4xl mb-3">{emptyIcon}</p>
-        <p className="text-textSecondary text-lg">{emptyTitle}</p>
+        <p className="text-textSecondary text-lg">{emptyTitle || t('tableEmpty')}</p>
         {emptySubtitle && <p className="text-textSecondary text-sm mt-2">{emptySubtitle}</p>}
       </div>
     )
@@ -68,7 +71,7 @@ export default function DataTable({
             {columns.map(col => (
               <th
                 key={col.key}
-                className={`px-4 py-3 font-medium ${col.align === 'center' ? 'text-center' : 'text-right'}`}
+                className={`px-4 py-3 font-medium ${col.align === 'center' ? 'text-center' : 'text-start'}`}
               >
                 {col.label}
               </th>

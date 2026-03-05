@@ -3,22 +3,24 @@ import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { collection, getCountFromServer } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import { useAuth } from '../context/AuthContext'
+import { useTranslation } from '../context/LanguageContext'
 import logo from '../../assets/logo.avif'
-
-const navItems = [
-  { path: '/', label: 'الرئيسية', icon: '📊' },
-  { path: '/opportunities', label: 'الفرص', icon: '🎯' },
-  { path: '/notifications', label: 'الإشعارات', icon: '🔔' },
-  { path: '/support', label: 'الدعم', icon: '📩' },
-  { path: '/settings', label: 'الإعدادات', icon: '⚙️' },
-]
 
 export default function Layout() {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, logout } = useAuth()
+  const { t, lang, setLang } = useTranslation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [activeNotifCount, setActiveNotifCount] = useState(0)
+
+  const navItems = [
+    { path: '/', label: t('navDashboard'), icon: '📊' },
+    { path: '/opportunities', label: t('navOpportunities'), icon: '🎯' },
+    { path: '/notifications', label: t('navNotifications'), icon: '🔔' },
+    { path: '/support', label: t('navSupport'), icon: '📩' },
+    { path: '/settings', label: t('navSettings'), icon: '⚙️' },
+  ]
 
   const adminName = user?.displayName || ''
   const adminEmail = user?.email || ''
@@ -35,7 +37,7 @@ export default function Layout() {
   const closeSidebar = () => setSidebarOpen(false)
 
   return (
-    <div className="flex min-h-screen bg-background" dir="rtl">
+    <div className="flex min-h-screen bg-background">
 
       {/* Mobile overlay */}
       {sidebarOpen && (
@@ -47,14 +49,14 @@ export default function Layout() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 right-0 z-50 w-56 bg-surface shadow-md flex flex-col py-4 px-3 gap-1 transform transition-transform duration-300 md:sticky md:top-0 md:h-screen md:translate-x-0 ${
-          sidebarOpen ? 'translate-x-0' : 'translate-x-full'
+        className={`fixed inset-y-0 ${lang === 'ar' ? 'right-0' : 'left-0'} z-50 w-56 bg-surface shadow-md flex flex-col py-4 px-3 gap-1 transform transition-transform duration-300 md:sticky md:top-0 md:h-screen md:translate-x-0 ${
+          sidebarOpen ? 'translate-x-0' : (lang === 'ar' ? 'translate-x-full' : '-translate-x-full')
         }`}
       >
         {/* Close button - mobile only */}
         <button
           onClick={closeSidebar}
-          className="md:hidden absolute top-3 left-3 text-textSecondary hover:text-textPrimary text-lg cursor-pointer"
+          className={`md:hidden absolute top-3 ${lang === 'ar' ? 'left-3' : 'right-3'} text-textSecondary hover:text-textPrimary text-lg cursor-pointer`}
         >
           ✕
         </button>
@@ -81,7 +83,7 @@ export default function Layout() {
             <span className="text-base relative">
               {item.icon}
               {item.path === '/notifications' && activeNotifCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-danger rounded-full border-2 border-surface" />
+                <span className="absolute -top-1 -end-1 w-2.5 h-2.5 bg-danger rounded-full border-2 border-surface" />
               )}
             </span>
             {item.label}
@@ -97,10 +99,10 @@ export default function Layout() {
           )}
           <button
             onClick={handleLogout}
-            className="w-full px-3 py-2 rounded-lg text-sm text-danger hover:bg-red-50 text-right flex items-center gap-2 cursor-pointer"
+            className="w-full px-3 py-2 rounded-lg text-sm text-danger hover:bg-red-50 text-start flex items-center gap-2 cursor-pointer"
           >
             <span>🚪</span>
-            تسجيل الخروج
+            {t('logout')}
           </button>
         </div>
       </aside>
@@ -110,11 +112,29 @@ export default function Layout() {
         {/* Mobile top bar */}
         <header className="md:hidden bg-surface shadow-sm px-4 py-3 flex items-center justify-between sticky top-0 z-30">
           <img src={logo} alt="CalGPA" className="h-8 w-auto object-contain" />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}
+              className="px-2.5 py-1 rounded-lg text-xs font-bold bg-primary-light text-primary hover:bg-primary hover:text-white transition cursor-pointer"
+            >
+              {lang === 'ar' ? 'EN' : 'عربي'}
+            </button>
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="text-textPrimary text-2xl cursor-pointer"
+            >
+              ☰
+            </button>
+          </div>
+        </header>
+
+        {/* Desktop top bar with language toggle */}
+        <header className="hidden md:flex bg-surface shadow-sm px-6 py-3 items-center justify-end sticky top-0 z-30">
           <button
-            onClick={() => setSidebarOpen(true)}
-            className="text-textPrimary text-2xl cursor-pointer"
+            onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}
+            className="px-3 py-1.5 rounded-lg text-sm font-bold bg-primary-light text-primary hover:bg-primary hover:text-white transition cursor-pointer"
           >
-            ☰
+            {lang === 'ar' ? 'EN' : 'عربي'}
           </button>
         </header>
 

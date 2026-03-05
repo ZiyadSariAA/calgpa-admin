@@ -1,4 +1,7 @@
+import { useTranslation } from '../context/LanguageContext'
+
 export default function Pagination({ currentPage, totalPages, onPageChange }) {
+  const { t } = useTranslation()
   if (totalPages <= 1) return null
 
   return (
@@ -8,7 +11,7 @@ export default function Pagination({ currentPage, totalPages, onPageChange }) {
         disabled={currentPage === 1}
         className="px-3 py-1.5 rounded-lg text-sm bg-surface hover:bg-primary-light disabled:opacity-40 cursor-pointer transition"
       >
-        السابق
+        {t('previous')}
       </button>
       <span className="text-sm text-textSecondary px-2">
         {currentPage} / {totalPages}
@@ -18,7 +21,7 @@ export default function Pagination({ currentPage, totalPages, onPageChange }) {
         disabled={currentPage === totalPages}
         className="px-3 py-1.5 rounded-lg text-sm bg-surface hover:bg-primary-light disabled:opacity-40 cursor-pointer transition"
       >
-        التالي
+        {t('next')}
       </button>
     </div>
   )

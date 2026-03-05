@@ -1,11 +1,14 @@
+import { useTranslation } from '../context/LanguageContext'
+
 export default function BulkActionBar({ selectedCount, actions }) {
+  const { t } = useTranslation()
   if (selectedCount === 0) return null
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-surface shadow-lg border-t border-border z-40 px-6 py-3">
-      <div className="max-w-7xl mx-auto flex items-center justify-between" dir="rtl">
+      <div className="max-w-7xl mx-auto flex items-center justify-between">
         <span className="text-sm font-medium text-textPrimary">
-          تم تحديد {selectedCount} عنصر
+          {t('selectedCount', { n: selectedCount })}
         </span>
         <div className="flex gap-2">
           {actions.map((action, i) => (

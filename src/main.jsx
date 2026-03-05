@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
+import { LanguageProvider } from './context/LanguageContext'
 import logo from '../assets/logo.avif'
 
 // Use logo as tab favicon (works even when logo is not in public/)
@@ -15,6 +16,8 @@ import logo from '../assets/logo.avif'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    <LanguageProvider>
+      <App />
+    </LanguageProvider>
   </StrictMode>,
 )

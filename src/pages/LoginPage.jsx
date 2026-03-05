@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { signInWithPopup, signOut } from 'firebase/auth'
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, googleProvider, db } from '../firebase/config'
+import { useTranslation } from '../context/LanguageContext'
 import logo from '../../assets/logo.avif'
 
 const SEED_EMAIL = import.meta.env.VITE_SEED_ADMIN_EMAIL || ''
@@ -9,6 +10,7 @@ const SEED_EMAIL = import.meta.env.VITE_SEED_ADMIN_EMAIL || ''
 export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const { t, lang, setLang } = useTranslation()
 
   const handleGoogleSignIn = async () => {
     setError('')
@@ -33,7 +35,7 @@ export default function LoginPage() {
         // Delete unauthorized user from Firebase Auth, then sign out
         await result.user.delete()
         await signOut(auth)
-        setError('هذا الحساب غير مصرح له')
+        setError(t('loginUnauthorized'))
       }
       // If admin exists, onAuthStateChanged in AuthContext handles the rest
     } catch (err) {
@@ -41,21 +43,29 @@ export default function LoginPage() {
       if (err.code === 'auth/popup-closed-by-user') {
         // user closed popup, do nothing
       } else if (err.code === 'auth/unauthorized-domain') {
-        setError('هذا الدومين غير مصرح له. أضف localhost في Firebase Console → Authentication → Settings → Authorized domains')
+        setError(t('loginDomainError'))
       } else {
-        setError('حدث خطأ أثناء تسجيل الدخول: ' + (err.code || err.message))
+        setError(t('loginError') + (err.code || err.message))
       }
     }
     setLoading(false)
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-5" dir="rtl">
+    <div className="min-h-screen flex items-center justify-center bg-background p-5">
       <div className="w-full max-w-sm bg-surface rounded-xl shadow-lg p-8">
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}
+            className="px-3 py-1.5 rounded-lg text-sm font-bold bg-primary-light text-primary hover:bg-primary hover:text-white transition cursor-pointer"
+          >
+            {lang === 'ar' ? 'EN' : 'عربي'}
+          </button>
+        </div>
         <div className="text-center mb-8">
           <img src={logo} alt="CalGPA" className="h-20 w-auto mx-auto mb-4 object-contain" />
-          <h1 className="text-2xl font-bold text-primary mb-1">CalGPA Admin</h1>
-          <p className="text-textSecondary text-sm">تسجيل دخول لوحة التحكم</p>
+          <h1 className="text-2xl font-bold text-primary mb-1">{t('loginTitle')}</h1>
+          <p className="text-textSecondary text-sm">{t('loginSubtitle')}</p>
         </div>
 
         {error && (
@@ -75,7 +85,7 @@ export default function LoginPage() {
             <path fill="#FBBC05" d="M10.53 28.59a14.5 14.5 0 0 1 0-9.18l-7.98-6.19a24.01 24.01 0 0 0 0 21.56l7.98-6.19z"/>
             <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
           </svg>
-          {loading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول بحساب Google'}
+          {loading ? t('loginLoading') : t('loginButton')}
         </button>
       </div>
     </div>

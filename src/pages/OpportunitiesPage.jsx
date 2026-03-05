@@ -13,6 +13,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import { fetchOpportunities } from '../scraper/fetchOpportunities'
+import { useTranslation } from '../context/LanguageContext'
 import Modal from '../components/Modal'
 import DataTable from '../components/DataTable'
 import Pagination from '../components/Pagination'
@@ -22,15 +23,6 @@ import BulkActionBar from '../components/BulkActionBar'
 
 const emptyForm = { title: '', company: '', specializations: '', link: '', deadline: '', type: '' }
 
-const typeOptions = [
-  { value: 'تطوير خريجين', label: 'تطوير خريجين (GDP)' },
-  { value: 'تدريب تعاوني', label: 'تدريب تعاوني (COOP)' },
-]
-
-function getTypeLabel(value) {
-  return typeOptions.find(t => t.value === value)?.label || value || '-'
-}
-
 function safeStr(val) {
   if (val == null) return '-'
   if (typeof val === 'object') return val.repr || val.value || JSON.stringify(val)
@@ -38,6 +30,7 @@ function safeStr(val) {
 }
 
 export default function OpportunitiesPage() {
+  const { t } = useTranslation()
   const [opportunities, setOpportunities] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -50,6 +43,15 @@ export default function OpportunitiesPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedIds, setSelectedIds] = useState([])
   const PAGE_SIZE = 10
+
+  const typeOptions = [
+    { value: 'تطوير خريجين', label: t('typeGDP') },
+    { value: 'تدريب تعاوني', label: t('typeCOOP') },
+  ]
+
+  function getTypeLabel(value) {
+    return typeOptions.find(tp => tp.value === value)?.label || value || '-'
+  }
 
   const colRef = collection(db, 'opportunities')
 
@@ -98,13 +100,13 @@ export default function OpportunitiesPage() {
   }
 
   async function handleDelete(id) {
-    if (!confirm('هل أنت متأكد من الحذف؟')) return
+    if (!confirm(t('confirmDelete'))) return
     await deleteDoc(doc(db, 'opportunities', id))
     loadData()
   }
 
   async function handleBulkDelete() {
-    if (!confirm(`هل أنت متأكد من حذف ${selectedIds.length} فرصة؟`)) return
+    if (!confirm(t('confirmBulkDeleteOpportunities', { n: selectedIds.length }))) return
     const batch = writeBatch(db)
     selectedIds.forEach(id => batch.delete(doc(db, 'opportunities', id)))
     await batch.commit()
@@ -119,16 +121,16 @@ export default function OpportunitiesPage() {
   async function handleFetch() {
     setFetching(true)
     try {
-      setFetchStatus('جاري الجلب من المصدر...')
+      setFetchStatus(t('fetchingFromSource'))
       const freshData = await fetchOpportunities()
       if (freshData.length === 0) {
-        alert('لم يتم العثور على فرص')
+        alert(t('noOpportunitiesFound'))
         setFetching(false)
         setFetchStatus('')
         return
       }
 
-      setFetchStatus('جاري المقارنة...')
+      setFetchStatus(t('comparing'))
       const snap = await getDocs(colRef)
       const existingDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }))
 
@@ -170,13 +172,13 @@ export default function OpportunitiesPage() {
       }
 
       if (toAdd.length === 0 && toUpdate.length === 0 && toDelete.length === 0) {
-        alert('لا توجد تغييرات — البيانات محدثة')
+        alert(t('noChanges'))
         setFetching(false)
         setFetchStatus('')
         return
       }
 
-      setFetchStatus(`جاري التحديث... (${toAdd.length} جديد, ${toUpdate.length} تحديث, ${toDelete.length} حذف)`)
+      setFetchStatus(t('updatingData', { add: toAdd.length, update: toUpdate.length, del: toDelete.length }))
 
       const allOps = []
       for (const item of toAdd) {
@@ -207,11 +209,11 @@ export default function OpportunitiesPage() {
         await batch.commit()
       }
 
-      alert(`تم: ${toUpdate.length} تحديث, ${toAdd.length} جديد, ${toDelete.length} محذوف`)
+      alert(t('syncDone', { update: toUpdate.length, add: toAdd.length, del: toDelete.length }))
       loadData()
     } catch (err) {
       console.error('Fetch error:', err)
-      alert('حدث خطأ أثناء جلب الفرص: ' + err.message)
+      alert(t('fetchError') + err.message)
     }
     setFetching(false)
     setFetchStatus('')
@@ -238,44 +240,44 @@ export default function OpportunitiesPage() {
   const columns = [
     {
       key: 'logo',
-      label: 'الشعار',
+      label: t('colLogo'),
       align: 'center',
       render: (row) => row.logo
         ? <img src={row.logo} alt="" className="w-8 h-8 rounded object-contain inline-block" />
         : <span className="inline-block w-8 h-8 rounded bg-border" />,
     },
-    { key: 'title', label: 'العنوان', render: (row) => <span className="font-medium text-textPrimary">{safeStr(row.title)}</span> },
-    { key: 'company', label: 'الشركة', render: (row) => <span className="text-textSecondary">{safeStr(row.company)}</span> },
-    { key: 'specializations', label: 'التخصصات', render: (row) => <span className="text-textSecondary">{safeStr(row.specializations)}</span> },
-    { key: 'type', label: 'النوع', render: (row) => <span className="text-textSecondary">{getTypeLabel(row.type)}</span> },
+    { key: 'title', label: t('colTitle'), render: (row) => <span className="font-medium text-textPrimary">{safeStr(row.title)}</span> },
+    { key: 'company', label: t('colCompany'), render: (row) => <span className="text-textSecondary">{safeStr(row.company)}</span> },
+    { key: 'specializations', label: t('colSpecializations'), render: (row) => <span className="text-textSecondary">{safeStr(row.specializations)}</span> },
+    { key: 'type', label: t('colType'), render: (row) => <span className="text-textSecondary">{getTypeLabel(row.type)}</span> },
     {
       key: 'status',
-      label: 'الحالة',
+      label: t('colStatus'),
       align: 'center',
       render: (row) =>
         row.status === 'Open' || row.dot === '🟢'
-          ? <span className="text-success">🟢 مفتوح</span>
+          ? <span className="text-success">{t('statusOpen')}</span>
           : row.status === 'Closed' || row.dot === '🔴'
-            ? <span className="text-danger">🔴 مغلق</span>
+            ? <span className="text-danger">{t('statusClosed')}</span>
             : <span className="text-textSecondary">{safeStr(row.status)}</span>,
     },
-    { key: 'deadline', label: 'الموعد النهائي', render: (row) => <span className="text-textSecondary">{safeStr(row.deadline)}</span> },
+    { key: 'deadline', label: t('colDeadline'), render: (row) => <span className="text-textSecondary">{safeStr(row.deadline)}</span> },
     {
       key: 'link',
-      label: 'الرابط',
+      label: t('colLink'),
       render: (row) => row.link
-        ? <a href={row.link} target="_blank" rel="noopener noreferrer" className="text-secondary hover:underline">فتح</a>
+        ? <a href={row.link} target="_blank" rel="noopener noreferrer" className="text-secondary hover:underline">{t('openLink')}</a>
         : '-',
     },
     {
       key: 'actions',
-      label: 'إجراءات',
+      label: t('colActions'),
       align: 'center',
       stopPropagation: true,
       render: (row) => (
         <>
-          <button onClick={() => openEdit(row)} className="text-secondary hover:underline me-3 cursor-pointer">تعديل</button>
-          <button onClick={() => handleDelete(row.id)} className="text-danger hover:underline cursor-pointer">حذف</button>
+          <button onClick={() => openEdit(row)} className="text-secondary hover:underline me-3 cursor-pointer">{t('edit')}</button>
+          <button onClick={() => handleDelete(row.id)} className="text-danger hover:underline cursor-pointer">{t('delete')}</button>
         </>
       ),
     },
@@ -285,8 +287,12 @@ export default function OpportunitiesPage() {
     <div className="pb-16">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-primary mb-1">إدارة الفرص</h2>
-          <p className="text-textSecondary text-sm">{filtered.length} فرصة {statusFilter !== 'all' ? `(من ${opportunities.length})` : ''}</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-primary mb-1">{t('manageOpportunities')}</h2>
+          <p className="text-textSecondary text-sm">
+            {statusFilter !== 'all'
+              ? t('opportunityCountFiltered', { n: filtered.length, total: opportunities.length })
+              : t('opportunityCount', { n: filtered.length })}
+          </p>
         </div>
         <div className="flex gap-2 sm:gap-3">
           <button
@@ -294,13 +300,13 @@ export default function OpportunitiesPage() {
             disabled={fetching}
             className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-secondary text-white rounded-lg text-sm hover:bg-blue-600 transition disabled:opacity-50 cursor-pointer"
           >
-            {fetching ? (fetchStatus || 'جاري الجلب...') : '🔄 جلب من المصدر'}
+            {fetching ? (fetchStatus || t('fetching')) : t('fetchFromSource')}
           </button>
           <button
             onClick={openAdd}
             className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-primary text-white rounded-lg text-sm hover:bg-primary-dark transition cursor-pointer"
           >
-            + إضافة فرصة
+            {t('addOpportunity')}
           </button>
         </div>
       </div>
@@ -310,24 +316,24 @@ export default function OpportunitiesPage() {
           <SearchInput
             value={searchQuery}
             onChange={v => { setSearchQuery(v); setCurrentPage(1) }}
-            placeholder="بحث بالعنوان، الشركة، التخصصات..."
+            placeholder={t('searchOpportunities')}
           />
         </div>
         <div className="flex flex-wrap gap-x-6 gap-y-2">
           <FilterBar
             filters={[
-              { key: 'all', label: 'الكل' },
-              { key: 'open', label: '🟢 مفتوح' },
-              { key: 'closed', label: '🔴 مغلق' },
+              { key: 'all', label: t('filterAll') },
+              { key: 'open', label: t('filterOpen') },
+              { key: 'closed', label: t('filterClosed') },
             ]}
             activeKey={statusFilter}
             onChange={k => { setStatusFilter(k); setCurrentPage(1) }}
           />
           <FilterBar
             filters={[
-              { key: 'all', label: 'كل الأنواع' },
-              { key: 'gdp', label: 'تطوير خريجين (GDP)' },
-              { key: 'coop', label: 'تدريب تعاوني (COOP)' },
+              { key: 'all', label: t('filterAllTypes') },
+              { key: 'gdp', label: t('typeGDP') },
+              { key: 'coop', label: t('typeCOOP') },
             ]}
             activeKey={typeFilter}
             onChange={k => { setTypeFilter(k); setCurrentPage(1) }}
@@ -340,8 +346,8 @@ export default function OpportunitiesPage() {
         data={paginated}
         loading={loading}
         emptyIcon="🎯"
-        emptyTitle="لا توجد فرص بعد"
-        emptySubtitle="أضف فرصة جديدة أو اجلب من المصدر"
+        emptyTitle={t('noOpportunities')}
+        emptySubtitle={t('noOpportunitiesHint')}
         selectable
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}
@@ -356,19 +362,19 @@ export default function OpportunitiesPage() {
       <BulkActionBar
         selectedCount={selectedIds.length}
         actions={[
-          { label: `حذف (${selectedIds.length})`, onClick: handleBulkDelete, variant: 'danger' },
+          { label: t('deleteBulkLabel', { n: selectedIds.length }), onClick: handleBulkDelete, variant: 'danger' },
         ]}
       />
 
       <Modal
         open={showModal}
         onClose={() => setShowModal(false)}
-        title={editingId ? 'تعديل الفرصة' : 'إضافة فرصة جديدة'}
+        title={editingId ? t('editOpportunity') : t('addNewOpportunity')}
       >
         <form onSubmit={handleSave}>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-textPrimary mb-1">العنوان</label>
+              <label className="block text-sm font-medium text-textPrimary mb-1">{t('fieldTitle')}</label>
               <input
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
@@ -377,7 +383,7 @@ export default function OpportunitiesPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-textPrimary mb-1">الشركة</label>
+              <label className="block text-sm font-medium text-textPrimary mb-1">{t('fieldCompany')}</label>
               <input
                 value={form.company}
                 onChange={(e) => setForm({ ...form, company: e.target.value })}
@@ -385,29 +391,29 @@ export default function OpportunitiesPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-textPrimary mb-1">التخصصات</label>
+              <label className="block text-sm font-medium text-textPrimary mb-1">{t('fieldSpecializations')}</label>
               <input
                 value={form.specializations}
                 onChange={(e) => setForm({ ...form, specializations: e.target.value })}
-                placeholder="مثال: هندسة برمجيات، تصميم"
+                placeholder={t('fieldSpecializationsPlaceholder')}
                 className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-textPrimary mb-1">النوع</label>
+              <label className="block text-sm font-medium text-textPrimary mb-1">{t('fieldType')}</label>
               <select
                 value={form.type}
                 onChange={(e) => setForm({ ...form, type: e.target.value })}
                 className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="">اختر النوع</option>
-                {typeOptions.map(t => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
+                <option value="">{t('fieldTypeSelect')}</option>
+                {typeOptions.map(tp => (
+                  <option key={tp.value} value={tp.value}>{tp.label}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-textPrimary mb-1">الرابط</label>
+              <label className="block text-sm font-medium text-textPrimary mb-1">{t('fieldLink')}</label>
               <input
                 value={form.link}
                 onChange={(e) => setForm({ ...form, link: e.target.value })}
@@ -416,7 +422,7 @@ export default function OpportunitiesPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-textPrimary mb-1">الموعد النهائي</label>
+              <label className="block text-sm font-medium text-textPrimary mb-1">{t('fieldDeadline')}</label>
               <input
                 type="date"
                 value={form.deadline}
@@ -431,14 +437,14 @@ export default function OpportunitiesPage() {
               type="submit"
               className="flex-1 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition cursor-pointer"
             >
-              {editingId ? 'حفظ التعديل' : 'إضافة'}
+              {editingId ? t('saveEdit') : t('add')}
             </button>
             <button
               type="button"
               onClick={() => setShowModal(false)}
               className="flex-1 py-2 bg-background text-textSecondary rounded-lg hover:bg-border transition cursor-pointer"
             >
-              إلغاء
+              {t('cancel')}
             </button>
           </div>
         </form>

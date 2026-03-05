@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { useTranslation } from './context/LanguageContext'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import OpportunitiesPage from './pages/OpportunitiesPage'
@@ -10,10 +11,11 @@ import Layout from './components/Layout'
 
 function ProtectedRoute({ children }) {
   const { isAdmin, loading } = useAuth()
+  const { t } = useTranslation()
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background" dir="rtl">
-        <p className="text-textSecondary text-lg">جاري التحقق...</p>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-textSecondary text-lg">{t('checking')}</p>
       </div>
     )
   }
@@ -22,10 +24,11 @@ function ProtectedRoute({ children }) {
 
 function PublicRoute({ children }) {
   const { isAdmin, loading } = useAuth()
+  const { t } = useTranslation()
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background" dir="rtl">
-        <p className="text-textSecondary text-lg">جاري التحقق...</p>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-textSecondary text-lg">{t('checking')}</p>
       </div>
     )
   }

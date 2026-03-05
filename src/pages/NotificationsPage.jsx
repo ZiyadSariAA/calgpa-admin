@@ -12,19 +12,21 @@ import {
   writeBatch,
 } from 'firebase/firestore'
 import { db } from '../firebase/config'
+import { useTranslation } from '../context/LanguageContext'
 import Modal from '../components/Modal'
 import DataTable from '../components/DataTable'
 import Pagination from '../components/Pagination'
 import BulkActionBar from '../components/BulkActionBar'
 
-function formatDate(ts) {
+function formatDate(ts, lang) {
   if (!ts) return '-'
   if (typeof ts === 'string') return ts
   const date = ts.toDate ? ts.toDate() : new Date(ts)
-  return date.toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' })
+  return date.toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 export default function NotificationsPage() {
+  const { t, lang } = useTranslation()
   const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -104,13 +106,13 @@ export default function NotificationsPage() {
   }
 
   async function handleDelete(id) {
-    if (!confirm('هل أنت متأكد من حذف هذا الإشعار؟')) return
+    if (!confirm(t('confirmDeleteNotification'))) return
     await deleteDoc(doc(db, 'notifications', id))
     await loadData()
   }
 
   async function handleBulkDelete() {
-    if (!confirm(`هل أنت متأكد من حذف ${selectedIds.length} إشعار؟`)) return
+    if (!confirm(t('confirmBulkDeleteNotifications', { n: selectedIds.length }))) return
     const batch = writeBatch(db)
     selectedIds.forEach(id => batch.delete(doc(db, 'notifications', id)))
     await batch.commit()
@@ -124,37 +126,37 @@ export default function NotificationsPage() {
   const columns = [
     {
       key: 'title',
-      label: 'العنوان',
+      label: t('colTitle'),
       render: (row) => <span className="font-medium text-textPrimary">{row.title}</span>,
     },
     {
       key: 'message',
-      label: 'الرسالة',
+      label: t('colMessage'),
       className: 'max-w-[300px] truncate',
       render: (row) => <span className="text-textSecondary">{row.message}</span>,
     },
     {
       key: 'link',
-      label: 'الرابط',
+      label: t('colLink'),
       render: (row) => row.link
         ? <a href={row.link} target="_blank" rel="noreferrer" className="text-primary hover:underline text-sm truncate block max-w-[200px]">{row.link}</a>
         : <span className="text-textSecondary text-sm">-</span>,
     },
     {
       key: 'date',
-      label: 'التاريخ',
-      render: (row) => <span className="text-textSecondary">{row.date || formatDate(row.createdAt)}</span>,
+      label: t('colDate'),
+      render: (row) => <span className="text-textSecondary">{row.date || formatDate(row.createdAt, lang)}</span>,
     },
     {
       key: 'actions',
-      label: 'إجراءات',
+      label: t('colActions'),
       align: 'center',
       stopPropagation: true,
       render: (row) => (
         <>
-          <button onClick={() => openResend(row)} className="text-success hover:underline text-sm cursor-pointer me-3">إعادة إرسال</button>
-          <button onClick={() => openEdit(row)} className="text-primary hover:underline text-sm cursor-pointer me-3">تعديل</button>
-          <button onClick={() => handleDelete(row.id)} className="text-danger hover:underline text-sm cursor-pointer">حذف</button>
+          <button onClick={() => openResend(row)} className="text-success hover:underline text-sm cursor-pointer me-3">{t('resend')}</button>
+          <button onClick={() => openEdit(row)} className="text-primary hover:underline text-sm cursor-pointer me-3">{t('edit')}</button>
+          <button onClick={() => handleDelete(row.id)} className="text-danger hover:underline text-sm cursor-pointer">{t('delete')}</button>
         </>
       ),
     },
@@ -164,14 +166,14 @@ export default function NotificationsPage() {
     <div className="pb-16">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-primary mb-1">الإشعارات</h2>
-          <p className="text-textSecondary text-sm">{notifications.length} إشعار</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-primary mb-1">{t('notifications')}</h2>
+          <p className="text-textSecondary text-sm">{t('notificationCount', { n: notifications.length })}</p>
         </div>
         <button
           onClick={openAdd}
           className="px-4 py-2 bg-primary text-white rounded-lg text-sm hover:bg-primary-dark transition cursor-pointer w-full sm:w-auto"
         >
-          + إشعار جديد
+          {t('newNotification')}
         </button>
       </div>
 
@@ -180,8 +182,8 @@ export default function NotificationsPage() {
         data={paginated}
         loading={loading}
         emptyIcon="🔔"
-        emptyTitle="لا توجد إشعارات"
-        emptySubtitle="أضف إشعار جديد للبدء"
+        emptyTitle={t('noNotifications')}
+        emptySubtitle={t('noNotificationsHint')}
         selectable
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}
@@ -196,19 +198,19 @@ export default function NotificationsPage() {
       <BulkActionBar
         selectedCount={selectedIds.length}
         actions={[
-          { label: `حذف (${selectedIds.length})`, onClick: handleBulkDelete, variant: 'danger' },
+          { label: t('deleteBulkLabel', { n: selectedIds.length }), onClick: handleBulkDelete, variant: 'danger' },
         ]}
       />
 
       <Modal
         open={showForm}
         onClose={closeForm}
-        title={editingId ? 'تعديل الإشعار' : 'إشعار جديد'}
+        title={editingId ? t('editNotification') : t('newNotificationTitle')}
       >
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-textPrimary mb-1">عنوان الإشعار</label>
+              <label className="block text-sm font-medium text-textPrimary mb-1">{t('notifFieldTitle')}</label>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -217,7 +219,7 @@ export default function NotificationsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-textPrimary mb-1">نص الإشعار</label>
+              <label className="block text-sm font-medium text-textPrimary mb-1">{t('notifFieldMessage')}</label>
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
@@ -227,7 +229,7 @@ export default function NotificationsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-textPrimary mb-1">رابط (اختياري)</label>
+              <label className="block text-sm font-medium text-textPrimary mb-1">{t('notifFieldLink')}</label>
               <input
                 value={link}
                 onChange={(e) => setLink(e.target.value)}
@@ -243,14 +245,14 @@ export default function NotificationsPage() {
               type="submit"
               className="flex-1 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition cursor-pointer"
             >
-              {editingId ? 'حفظ التعديل' : 'إرسال الإشعار'}
+              {editingId ? t('saveEdit') : t('sendNotification')}
             </button>
             <button
               type="button"
               onClick={closeForm}
               className="flex-1 py-2 bg-background text-textSecondary rounded-lg hover:bg-border transition cursor-pointer"
             >
-              إلغاء
+              {t('cancel')}
             </button>
           </div>
         </form>
